@@ -1,9 +1,9 @@
 require 'gosu'
 
 class GameWindow < Gosu::Window
-  def initialize(width=640, height=480)
-    @width=width
-    @height=height
+  def initialize(width = 800, height = 800)
+    @width = width
+    @height = height
     super @width, @height, false
     self.caption = "Life Game by Conway"
     @world = World.new(@width, @height)
@@ -25,7 +25,7 @@ class GameWindow < Gosu::Window
 
     @world.cells.each do |rows|
       rows.each do |cell|
-        if cell.alive then
+        if cell.alive? then
           draw_cell(cell.x, cell.y, @alive)
         else
           draw_cell(cell.x, cell.y, @dead )
@@ -35,12 +35,12 @@ class GameWindow < Gosu::Window
   end
 
   def draw_cell(x,y,color)
-    x*=10
-    y*=10
-    draw_quad(x+1,y+1,color,
-              x+9,y+1,color,
-              x+9,y+9,color,
-              x+1,y+9,color)
+    x *= 100
+    y *= 100
+    draw_quad(x+10,y+10,color,
+              x+90,y+10,color,
+              x+90,y+90,color,
+              x+10,y+90,color)
   end
 
   def button_down(id)
@@ -48,13 +48,19 @@ class GameWindow < Gosu::Window
       close
     end
     if id == Gosu::KbSpace then
-      start_game
+      #@world.print_cells
+      @world.next_state
     end
     if id == Gosu::MsLeft then
-      x = mouse_x/10.to_i
-      y = mouse_y/10.to_i
-      puts x,y
-      @world.cells[x][y].reverse
+      x = mouse_x/100.to_i
+      y = mouse_y/100.to_i
+      @world.cells[y][x].reverse!
+    end
+    if id == Gosu::MsRight then
+      x = mouse_x/100.to_i
+      y = mouse_y/100.to_i
+      puts @world.count_neighbours(y, x)
+      #@world.next_state
     end
   end
 
@@ -64,33 +70,108 @@ class GameWindow < Gosu::Window
 end
 
 class World
-
-  attr_accessor :cells
-
+  attr_accessor :cells, :next_cells
   def initialize(width, height)
-    @rows = height/10
-    @cols = width/10
-    @cells = Array.new(@cols) do |col|
-      Array.new(@rows) do |row|
-        Cell.new(col,row)
+    @rows = height/100
+    @cols = width/100
+    @cells = Array.new(@rows) do |row|
+      Array.new(@cols) do |col|
+        Cell.new(row,col)
       end
     end
+    @next_cells = Array.new(@rows) do |row|
+      Array.new(@cols) do |col|
+        Cell.new(row,col)
+      end
+    end
+  end
+
+  def next_state
+    @next_cells = Array.new(@rows) do |row|
+      Array.new(@cols) do |col|
+        Cell.new(row,col)
+      end
+    end
+    @cells.each do |rows|
+      rows.each do |cell|
+        @next_cells[cell.y][cell.x].alive = cell.alive?
+        neighbours = count_neighbours(cell.y, cell.x)
+        if  neighbours == 3 then
+          @next_cells[cell.y][cell.x].revive!
+        end
+        if (neighbours != 2 && neighbours != 3) && cell.alive? then 
+          @next_cells[cell.y][cell.x].die!
+          puts neighbours
+        end
+      end
+    end
+    @cells.each do |rows|
+      rows.each do |cell|
+        cell.alive = @next_cells[cell.y][cell.x].alive?
+      end
+    end
+    puts "Next generation"
+  end
+
+  def print_cells
+    puts "("*80
+    @cells.each do |rows|
+      rows.each do |cell|
+        print cell.y,',',cell.x,',',cell.alive,'  '
+      end
+      puts
+    end
+    puts "*"*80
+    @next_cells.each do |rows|
+      rows.each do |cell|
+        print cell.y,',',cell.x,',',cell.alive,'  '
+      end
+      puts
+    end
+  end
+  
+  def count_neighbours(y, x)
+    neighbours = 0
+    if x < @cols-1 then
+      neighbours +=1 if @cells[y-1][x-1].alive 
+      neighbours +=1 if @cells[y-1][x].alive 
+      neighbours +=1 if @cells[y-1][x+1].alive 
+      neighbours +=1 if @cells[y][x-1].alive 
+      neighbours +=1 if @cells[y][x+1].alive 
+      if y < @rows-1 then
+        neighbours +=1 if @cells[y+1][x-1].alive 
+        neighbours +=1 if @cells[y+1][x].alive 
+        neighbours +=1 if @cells[y+1][x+1].alive
+      end
+    end
+    neighbours
   end
 end
 
 class Cell
-
   attr_accessor :x,:y,:alive
-
-  def initialize(x,y)
+  def initialize(y,x)
     @x = x
     @y = y
     @alive=false
   end
   
-  def reverse
+  def reverse!
     self.alive = !alive
   end
+
+  def revive!
+    self.alive = true
+  end
+
+  def die!
+    self.alive = false
+  end
+
+  def alive?
+    alive
+  end
+
 end
 
 window = GameWindow.new
