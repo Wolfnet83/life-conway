@@ -16,7 +16,6 @@ class GameWindow < Gosu::Window
   end
 
   def update
-      @world.next_state
   end
 
   def draw
@@ -52,7 +51,7 @@ class GameWindow < Gosu::Window
       close
     end
     if id == Gosu::KbSpace then
-      #update
+      @world.next_state
     end
     if id == Gosu::MsLeft then
       x = mouse_x/10.to_i
